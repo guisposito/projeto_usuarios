@@ -1,11 +1,58 @@
 class UserController {
 
-    constructor(formId, tableId){
+    constructor(formIdCreate, formIdUpdate, tableId){
 
-        this.formEl = document.getElementById(formId);
+        this.formEl = document.getElementById(formIdCreate);
+        this.formIdUpdateEl = document.getElementById(formIdUpdate);
         this.tableEl = document.getElementById(tableId);
 
         this.onSubmit();
+        this.onEdit();
+
+    }
+
+    onEdit(){
+
+        document.querySelector("#box-user-update .btn-cancel").addEventListener("click", e=>{
+
+            this.showPanelCreate();
+
+        });
+
+        this.formIdUpdateEl.addEventListener("submit", event =>{
+            //cancelando comportamento da página
+            event.preventDefault();
+            //evitando de cadastrar varias vezes o mesmo user
+            let btn = this.formIdUpdateEl.querySelector("[type=submit]");
+            //trancando o botão salvar
+            btn.disabled = true;
+
+            let values = this.getValues(this.formIdUpdateEl);
+
+            let index = this.formIdUpdateEl.dataset.trIndex;
+
+            let tr = this.tableEl.rows[index];
+
+            tr.dataset.user = JSON.stringify(values);
+
+            tr.innerHTML = `
+                <td><img src="${values.photo}" alt="User Image" class="img-circle img-sm"></td>
+                <td>${values.name}</td>
+                <td>${values.email}</td>
+                <td>${(values.admin) ? 'Sim' : 'Não'}</td>
+                <td>${Utils.dateFormat(values.register)}</td>
+                <td>
+                    <button type="button" class="btn btn-primary btn-edit btn-xs btn-flat">Editar</button>
+                    <button type="button" class="btn btn-danger btn-xs btn-flat">Excluir</button>
+                </td>
+            `;
+
+            this.addEventsTr(tr);
+
+            this.updateCount();
+
+
+        });
 
     }
 
@@ -24,7 +71,7 @@ class UserController {
             btn.disabled = true;
 
             //adicionando a imagem
-            let values = this.getValues()
+            let values = this.getValues(this.formEl);
             //values.photo = "";
 
             //validando se a foto está vazia
@@ -88,14 +135,14 @@ class UserController {
         
     }
 
-    getValues(){
+    getValues(formEl){
 
         let user = {};
         let IsValid = true;
 
         
         //spread, transformou em array e utilizou o spread para nao ter q colocar o indice e funcionar o foreach
-        [...this.formEl.elements].forEach(function(field, index){
+        [...formEl.elements].forEach(function(field, index){
 
             
             //validando campos não preenchidos
@@ -162,13 +209,81 @@ class UserController {
             <td>${(dataUser.admin) ? 'Sim' : 'Não'}</td>
             <td>${Utils.dateFormat(dataUser.register)}</td>
             <td>
-                <button type="button" class="btn btn-primary btn-xs btn-flat">Editar</button>
+                <button type="button" class="btn btn-primary btn-edit btn-xs btn-flat">Editar</button>
                 <button type="button" class="btn btn-danger btn-xs btn-flat">Excluir</button>
             </td>
         `;
+
+        this.addEventsTr(tr);
+
         this.tableEl.appendChild(tr);
 
         this.updateCount();
+
+    }
+
+    //evento de click dentro do btn-edit
+    addEventsTr(tr){
+        //coletando os dados da linha para editar
+        tr.querySelector(".btn-edit").addEventListener("click", e=>{
+            //convertendo para obj
+            let json = JSON.parse(tr.dataset.user);
+
+            //criando um id para cada linha pois precisamos recuperar o formulario e devolver na mesma linha
+            this.formIdUpdateEl.dataset.trIndex = tr.sectionRowIndex;
+
+            //for in para trazer todos os campos do formulário
+            for (let name in json){
+                //selecionand o nome do campo trazido pelo json e dando um replace para retirar o _
+                let field = this.formIdUpdateEl.querySelector("[name =" + name.replace("_", "") + "]");
+
+                //verificando o se o campo existe
+                if (field) {
+
+
+                    switch (field.type) {
+                        case 'file':
+                        continue;
+
+                        case 'radio':
+                            //verificando o input que tenha o gender e o value
+                            field = this.formEl.querySelector("[name =" + name.replace("_", "") + "][value=" + json[name] + "]");
+                            field.checked = 'true';
+                        break;
+
+                        case 'checkbox' :
+                            field.checked = json[name];
+                        break;
+
+                        default:
+                            field.value = json[name];
+                    }
+
+                    field.value = json[name];
+
+                }
+
+            }
+
+            //recuperando a foto
+            this.formIdUpdateEl.querySelector(".photo").src = json._photo;
+           
+            this.showPanelUpdate();
+
+        });
+    }
+
+    showPanelCreate(){
+
+        document.querySelector("#box-user-create").style.display ="block";
+        document.querySelector("#box-user-update").style.display ="none";
+
+    }
+
+    showPanelUpdate(){
+
+        document.querySelector("#box-user-create").style.display ="none";
+        document.querySelector("#box-user-update").style.display ="block";
 
     }
 
